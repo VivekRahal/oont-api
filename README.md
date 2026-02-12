@@ -78,11 +78,11 @@ Once the server is running, visit the Swagger UI at:
 
 The most critical challenge in this application is preventing overselling — multiple users attempting to purchase the last item in stock simultaneously.
 
-**Solution: Pessimistic Locking with `SELECT ... FOR UPDATE` inside Serializable Transactions**
+**Solution: Pessimistic Locking with `SELECT ... FOR UPDATE`**
 
-When a `POST /orders` request is received, the service opens a Prisma interactive transaction with `Serializable` isolation level. Within this transaction, each product row referenced in the cart is locked using a raw SQL `SELECT ... FOR UPDATE` query. This row-level lock prevents any other concurrent transaction from reading or modifying the same product rows until the current transaction completes. If all stock checks pass, stock is decremented, the order is created, and the cart is cleared — all atomically. If any item has insufficient stock, the entire transaction rolls back with no side effects: no stock is changed and the cart remains intact.
+When a `POST /orders` request is received, the service opens a Prisma interactive transaction. Within this transaction, each product row referenced in the cart is locked using a raw SQL `SELECT ... FOR UPDATE` query. This row-level lock forces any other concurrent transaction to **wait** until the current one completes before it can read or modify the same product row. Once the lock is acquired, the service checks stock availability, decrements stock, creates the order, and clears the cart — all atomically. If any item has insufficient stock, the entire transaction rolls back with no side effects.
 
-This approach was chosen over optimistic concurrency control (version columns) because it is simpler to reason about, avoids retry logic, and performs well under the expected load of a grocery delivery service where write contention on individual product rows is moderate rather than extreme.
+This approach was chosen over optimistic concurrency control (version columns) because it is simpler to reason about, avoids retry loops, and performs well under the expected load of a grocery delivery service where write contention on individual product rows is moderate rather than extreme. It also avoids the false rejection problem that Serializable isolation can cause — with `FOR UPDATE`, transactions queue up rather than aborting, so orders only fail when stock is genuinely insufficient.
 
 ## Design Decisions
 
