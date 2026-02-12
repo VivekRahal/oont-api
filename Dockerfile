@@ -27,6 +27,7 @@ COPY --from=base /app/dist ./dist
 COPY --from=base /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=base /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=base /app/prisma ./prisma
+COPY --from=base /app/public ./public
 
 EXPOSE 3000
 
