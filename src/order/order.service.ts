@@ -25,9 +25,9 @@ export class OrderService {
       throw new BadRequestException('Cart is empty');
     }
 
-    // Use an interactive transaction with serializable isolation
-    // to prevent race conditions (overselling)
-    try {
+    // Use an interactive transaction with SELECT ... FOR UPDATE
+    // to prevent race conditions (overselling). The row-level lock ensures
+    // only one transaction can read+modify a product's stock at a time.
     return await this.prisma.$transaction(
       async (tx) => {
         const insufficientItems: {
@@ -120,23 +120,7 @@ export class OrderService {
 
         return order;
       },
-      {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-      },
     );
-    } catch (error) {
-      // Handle PostgreSQL serialization failures (concurrent transaction conflicts)
-      // Error code P2034 = transaction conflict, 40001 = serialization_failure
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        (error.code === 'P2034' || error.code === 'P2010')
-      ) {
-        throw new BadRequestException(
-          'Order could not be processed due to concurrent demand. Please try again.',
-        );
-      }
-      throw error;
-    }
   }
 
   async findOne(id: string) {
