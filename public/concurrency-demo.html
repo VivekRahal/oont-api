@@ -541,8 +541,7 @@ User B <span class="fail">BLOCKED ⏳</span> (waiting for A)  →  reads stock =
       </div>
       <div class="control-group">
         <label>Qty each:</label>
-        <input type="number" id="qtyEach" value="0" min="1" max="500" disabled>
-        <span style="font-size:12px;color:var(--text-light);">(auto)</span>
+        <input type="number" id="qtyEach" value="1" min="1" max="500">
       </div>
     </div>
     <button class="run-btn" id="runBtn" onclick="runDemo()">&#9654; Race All Users Simultaneously</button>
@@ -663,8 +662,8 @@ function getEmoji(name) {
 
 function renderUsers() {
   const n = parseInt(document.getElementById('numUsers').value) || 10;
+  const qty = parseInt(document.getElementById('qtyEach').value) || 1;
   const grid = document.getElementById('usersGrid');
-  const qty = Math.floor(state.originalStock / 3);
 
   grid.innerHTML = Array.from({length: n}, (_, i) => `
     <div class="user-card waiting" id="user-${i}">
@@ -706,10 +705,10 @@ async function runDemo() {
   updateStockDisplay(freshProduct.stock);
 
   const numUsers = parseInt(document.getElementById('numUsers').value) || 10;
-  const qtyEach = Math.floor(state.originalStock / 3);
+  const qtyEach = parseInt(document.getElementById('qtyEach').value) || 1;
 
-  if (qtyEach < 1) {
-    alert('Stock too low to run demo. Please reset or reseed.');
+  if (qtyEach < 1 || qtyEach > state.originalStock) {
+    alert(`Quantity must be between 1 and ${state.originalStock} (current stock).`);
     btn.disabled = false;
     btn.textContent = '▶ Race All Users Simultaneously';
     state.running = false;
@@ -893,8 +892,11 @@ async function resetDemo() {
   tlog('Stock restored. Ready for another race!', 't-info');
 }
 
-// Re-render users when count changes
+// Re-render users when controls change
 document.getElementById('numUsers').addEventListener('change', renderUsers);
+document.getElementById('qtyEach').addEventListener('change', renderUsers);
+document.getElementById('numUsers').addEventListener('input', renderUsers);
+document.getElementById('qtyEach').addEventListener('input', renderUsers);
 </script>
 </body>
 </html>
