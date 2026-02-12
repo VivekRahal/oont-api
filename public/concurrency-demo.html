@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OoNt — Concurrency Demo</title>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --green-900: #1B3409;
+  --green-800: #2D5016;
+  --green-700: #3A6B1E;
+  --green-600: #4A7C2E;
+  --green-400: #7BB84E;
+  --green-300: #A3D475;
+  --green-200: #C8E8A8;
+  --green-100: #E8F5D4;
+  --green-50: #F4FAE9;
+  --cream: #FAF7F2;
+  --cream-dark: #F0EBE1;
+  --red: #E74C3C;
+  --red-light: #FDF0EF;
+  --text: #1A1A1A;
+  --text-mid: #4A4A4A;
+  --text-light: #7A7A7A;
+  --white: #FFFFFF;
+  --radius: 12px;
+  --radius-lg: 20px;
+}
+
+body {
+  font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+  background: var(--cream);
+  color: var(--text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px 24px;
+}
+
+/* Header */
+.demo-header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.demo-header .logo {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--green-800);
+  letter-spacing: -1px;
+  margin-bottom: 16px;
+}
+
+.demo-header h1 {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--green-900);
+  letter-spacing: -1px;
+  margin-bottom: 12px;
+}
+
+.demo-header p {
+  font-size: 16px;
+  color: var(--text-mid);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 12px;
+  color: var(--green-700);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.back-link:hover { text-decoration: underline; }
+
+/* Problem explanation */
+.problem-box {
+  background: var(--white);
+  border: 2px solid var(--red);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  margin-bottom: 32px;
+}
+
+.problem-box h3 {
+  color: var(--red);
+  font-size: 16px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.problem-box pre {
+  background: #1a1a1a;
+  color: #e0e0e0;
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  overflow-x: auto;
+  line-height: 1.7;
+}
+
+.problem-box pre .win { color: #7BB84E; }
+.problem-box pre .fail { color: #E74C3C; }
+.problem-box pre .dim { color: #666; }
+
+/* Stock display */
+.stock-display {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  text-align: center;
+  margin-bottom: 32px;
+  border: 1px solid rgba(27,52,9,.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.stock-display h3 {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-light);
+  margin-bottom: 8px;
+}
+
+.stock-product {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 22px;
+  color: var(--green-900);
+  margin-bottom: 16px;
+}
+
+.stock-product .emoji { font-size: 32px; margin-right: 8px; }
+
+.stock-bar-container {
+  background: var(--cream);
+  border-radius: 50px;
+  height: 40px;
+  position: relative;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.stock-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--green-400), var(--green-600));
+  border-radius: 50px;
+  transition: width .6s cubic-bezier(.4,0,.2,1);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 12px;
+  min-width: 40px;
+}
+
+.stock-bar.danger {
+  background: linear-gradient(90deg, var(--red), #c0392b);
+}
+
+.stock-bar-label {
+  color: var(--white);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.stock-numbers {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-light);
+}
+
+.stock-big-number {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 64px;
+  font-weight: 700;
+  color: var(--green-800);
+  margin: 8px 0;
+  transition: color .3s;
+}
+
+.stock-big-number.danger { color: var(--red); }
+
+/* Users grid */
+.users-section {
+  margin-bottom: 32px;
+}
+
+.users-section h3 {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 20px;
+  color: var(--green-900);
+  margin-bottom: 16px;
+}
+
+.users-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.user-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 20px 16px;
+  text-align: center;
+  border: 2px solid var(--cream-dark);
+  transition: all .4s cubic-bezier(.4,0,.2,1);
+  position: relative;
+  overflow: hidden;
+}
+
+.user-card .avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--green-100);
+  margin: 0 auto 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  transition: all .3s;
+}
+
+.user-card .name {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--green-900);
+  margin-bottom: 4px;
+}
+
+.user-card .wants {
+  font-size: 12px;
+  color: var(--text-light);
+  margin-bottom: 8px;
+}
+
+.user-card .status-text {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 50px;
+  display: inline-block;
+}
+
+/* States */
+.user-card.waiting {
+  border-color: var(--cream-dark);
+}
+.user-card.waiting .status-text {
+  background: var(--cream);
+  color: var(--text-light);
+}
+
+.user-card.racing {
+  border-color: #f39c12;
+  animation: pulse-border .6s ease infinite;
+}
+.user-card.racing .avatar {
+  animation: shake .3s ease infinite;
+}
+.user-card.racing .status-text {
+  background: #fef9e7;
+  color: #f39c12;
+}
+
+.user-card.success {
+  border-color: var(--green-400);
+  background: var(--green-50);
+}
+.user-card.success .avatar {
+  background: var(--green-400);
+}
+.user-card.success .status-text {
+  background: var(--green-200);
+  color: var(--green-800);
+}
+
+.user-card.failed {
+  border-color: var(--red);
+  background: var(--red-light);
+}
+.user-card.failed .avatar {
+  background: #fadbd8;
+}
+.user-card.failed .status-text {
+  background: #fadbd8;
+  color: var(--red);
+}
+
+.user-card .time {
+  font-size: 11px;
+  color: var(--text-light);
+  margin-top: 4px;
+}
+
+@keyframes pulse-border {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(243,156,18,.3); }
+  50% { box-shadow: 0 0 0 6px rgba(243,156,18,.1); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+@keyframes pop-in {
+  0% { transform: scale(0.8); opacity: 0; }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Controls */
+.controls {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.controls label {
+  display: block;
+  font-size: 14px;
+  color: var(--text-mid);
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.controls .row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--white);
+  border-radius: 50px;
+  padding: 6px 16px;
+  border: 1.5px solid var(--cream-dark);
+}
+
+.control-group label {
+  font-size: 13px;
+  color: var(--text-mid);
+  margin: 0;
+  white-space: nowrap;
+}
+
+.control-group select, .control-group input {
+  border: none;
+  background: none;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--green-800);
+  outline: none;
+  width: 60px;
+  text-align: center;
+}
+
+.run-btn {
+  background: var(--green-800);
+  color: var(--white);
+  border: none;
+  border-radius: 50px;
+  padding: 16px 40px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .3s;
+  letter-spacing: 0.3px;
+}
+
+.run-btn:hover { background: var(--green-700); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(27,52,9,.2); }
+.run-btn:active { transform: translateY(0); }
+.run-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.reset-btn {
+  background: none;
+  border: 1.5px solid var(--cream-dark);
+  border-radius: 50px;
+  padding: 12px 28px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-light);
+  cursor: pointer;
+  transition: all .3s;
+  margin-left: 8px;
+}
+
+.reset-btn:hover { border-color: var(--text-light); color: var(--text-mid); }
+
+/* Results panel */
+.results-panel {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  margin-top: 32px;
+  border: 1px solid rgba(27,52,9,.06);
+  display: none;
+}
+
+.results-panel.show { display: block; animation: pop-in .4s ease; }
+
+.results-panel h3 {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 22px;
+  color: var(--green-900);
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.result-stat {
+  text-align: center;
+  padding: 20px;
+  background: var(--cream);
+  border-radius: var(--radius);
+}
+
+.result-stat .number {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -1px;
+}
+
+.result-stat .label {
+  font-size: 13px;
+  color: var(--text-light);
+  margin-top: 4px;
+}
+
+.result-stat.green .number { color: var(--green-700); }
+.result-stat.red .number { color: var(--red); }
+.result-stat.neutral .number { color: var(--green-900); }
+
+.verdict {
+  text-align: center;
+  padding: 20px;
+  border-radius: var(--radius);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.verdict.pass {
+  background: var(--green-100);
+  color: var(--green-800);
+}
+
+.verdict.fail {
+  background: var(--red-light);
+  color: var(--red);
+}
+
+/* Timeline */
+.timeline {
+  margin-top: 24px;
+  padding: 20px;
+  background: #1a1a1a;
+  border-radius: var(--radius);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 13px;
+  line-height: 1.8;
+  color: #ccc;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.timeline .t-success { color: #7BB84E; }
+.timeline .t-fail { color: #E74C3C; }
+.timeline .t-info { color: #3498db; }
+.timeline .t-warn { color: #f39c12; }
+.timeline .t-dim { color: #666; }
+
+/* Responsive */
+@media (max-width: 640px) {
+  .container { padding: 24px 16px; }
+  .demo-header h1 { font-size: 28px; }
+  .users-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
+  .user-card { padding: 14px 10px; }
+  .stock-big-number { font-size: 48px; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="demo-header">
+    <a href="/" class="back-link">&larr; Back to Store</a>
+    <div class="logo">OoNt</div>
+    <h1>Concurrency Demo</h1>
+    <p>Watch multiple users try to buy the same limited-stock item at the exact same moment. See how our database locking prevents overselling.</p>
+  </div>
+
+  <!-- Problem explanation -->
+  <div class="problem-box">
+    <h3>&#9888; The Problem We're Solving</h3>
+    <pre><span class="dim">// Without protection (BROKEN):</span>
+User A reads stock = <span class="win">1</span>    →  checks: 1 >= 1 <span class="win">✓</span>  →  sets stock = 0  <span class="win">✅ Order placed</span>
+User B reads stock = <span class="win">1</span>    →  checks: 1 >= 1 <span class="win">✓</span>  →  sets stock = 0  <span class="fail">❌ OVERSOLD!</span>
+<span class="dim">Both read the old value before either writes. We sold 2 items but only had 1.</span>
+
+<span class="dim">// With SELECT ... FOR UPDATE (OUR SOLUTION):</span>
+User A <span class="win">LOCKS row</span>, reads stock = 1  →  1 >= 1 <span class="win">✓</span>  →  stock = 0  →  <span class="win">COMMIT ✅</span>
+User B <span class="fail">BLOCKED ⏳</span> (waiting for A)  →  reads stock = 0  →  0 < 1 <span class="fail">✗</span>  →  <span class="fail">REJECTED ❌</span></pre>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <div class="row">
+      <div class="control-group">
+        <label>Users:</label>
+        <input type="number" id="numUsers" value="10" min="2" max="20">
+      </div>
+      <div class="control-group">
+        <label>Qty each:</label>
+        <input type="number" id="qtyEach" value="0" min="1" max="500" disabled>
+        <span style="font-size:12px;color:var(--text-light);">(auto)</span>
+      </div>
+    </div>
+    <button class="run-btn" id="runBtn" onclick="runDemo()">&#9654; Race All Users Simultaneously</button>
+    <button class="reset-btn" id="resetBtn" onclick="resetDemo()" style="display:none;">Reset Demo</button>
+  </div>
+
+  <!-- Stock display -->
+  <div class="stock-display">
+    <h3>Product Stock Level</h3>
+    <div class="stock-product" id="stockProduct">Loading...</div>
+    <div class="stock-big-number" id="stockNumber">-</div>
+    <div class="stock-bar-container">
+      <div class="stock-bar" id="stockBar" style="width:100%">
+        <span class="stock-bar-label" id="stockBarLabel">-</span>
+      </div>
+    </div>
+    <div class="stock-numbers">
+      <span>0</span>
+      <span id="stockMax">-</span>
+    </div>
+  </div>
+
+  <!-- Users -->
+  <div class="users-section">
+    <h3>Competing Users</h3>
+    <div class="users-grid" id="usersGrid"></div>
+  </div>
+
+  <!-- Results -->
+  <div class="results-panel" id="resultsPanel">
+    <h3>Race Results</h3>
+    <div class="results-grid" id="resultsGrid"></div>
+    <div class="verdict" id="verdict"></div>
+    <div class="timeline" id="timeline"></div>
+  </div>
+</div>
+
+<script>
+const AVATARS = ['👨','👩','👨‍💼','👩‍💼','🧑','👴','👵','🧔','👱‍♀️','👨‍🦰','👩‍🦱','🧑‍🦳','👨‍🦲','👩‍🦰','🧑‍🦱','👨‍🦳','👩‍🦲','🧔‍♀️','👱','🧑‍🦰'];
+
+let state = {
+  product: null,
+  originalStock: 0,
+  userIds: [],
+  orderIds: [],
+  running: false,
+  timelineLog: [],
+};
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+  });
+  const body = await res.json();
+  return { status: res.status, body };
+}
+
+function tlog(msg, cls = '') {
+  const time = new Date().toISOString().split('T')[1].slice(0, 12);
+  state.timelineLog.push(`<span class="t-dim">[${time}]</span> <span class="${cls}">${msg}</span>`);
+  const el = document.getElementById('timeline');
+  if (el) {
+    el.innerHTML = state.timelineLog.join('\n');
+    el.scrollTop = el.scrollHeight;
+  }
+}
+
+// Initialize
+(async function init() {
+  const { body } = await api('/products?limit=1');
+  if (!body.data || body.data.length === 0) {
+    document.getElementById('stockProduct').textContent = 'No products found! Please seed the database.';
+    return;
+  }
+  state.product = body.data[0];
+  state.originalStock = state.product.stock;
+  updateStockDisplay(state.product.stock);
+  renderUsers();
+})();
+
+function updateStockDisplay(stock) {
+  const p = state.product;
+  const max = state.originalStock;
+  document.getElementById('stockProduct').innerHTML = `<span class="emoji">${getEmoji(p.name)}</span> ${p.name}`;
+  document.getElementById('stockNumber').textContent = stock;
+  document.getElementById('stockMax').textContent = max;
+  document.getElementById('stockBarLabel').textContent = `${stock} / ${max}`;
+
+  const pct = max > 0 ? (stock / max * 100) : 0;
+  const bar = document.getElementById('stockBar');
+  bar.style.width = Math.max(pct, 5) + '%';
+
+  const numEl = document.getElementById('stockNumber');
+  if (pct < 20) {
+    bar.classList.add('danger');
+    numEl.classList.add('danger');
+  } else {
+    bar.classList.remove('danger');
+    numEl.classList.remove('danger');
+  }
+}
+
+function getEmoji(name) {
+  const map = {
+    'Banana':'🍌','Apple':'🍎','Strawberries':'🍓','Avocado':'🥑','Tomatoes':'🍅',
+    'Broccoli':'🥦','Carrots':'🥕','Spinach':'🥬','Whole Milk':'🥛','Cheddar':'🧀',
+    'Yogurt':'🫙','Butter':'🧈','Sourdough':'🍞','Croissants':'🥐','Bagels':'🥯',
+    'Chicken':'🍗','Beef':'🥩','Salmon':'🐟','Orange':'🍊','Water':'💧',
+    'Tea':'🍵','Nuts':'🥜','Chocolate':'🍫','Crackers':'🍘','Pizza':'🍕',
+    'Ice Cream':'🍦','Peas':'🫛',
+  };
+  for (const [key, emoji] of Object.entries(map)) {
+    if (name.includes(key)) return emoji;
+  }
+  return '🛒';
+}
+
+function renderUsers() {
+  const n = parseInt(document.getElementById('numUsers').value) || 10;
+  const grid = document.getElementById('usersGrid');
+  const qty = Math.floor(state.originalStock / 3);
+
+  grid.innerHTML = Array.from({length: n}, (_, i) => `
+    <div class="user-card waiting" id="user-${i}">
+      <div class="avatar">${AVATARS[i % AVATARS.length]}</div>
+      <div class="name">User ${i + 1}</div>
+      <div class="wants">Wants ${qty}x</div>
+      <div class="status-text">Waiting</div>
+      <div class="time" id="user-time-${i}"></div>
+    </div>
+  `).join('');
+}
+
+function setUserState(i, stateName, statusText, time) {
+  const card = document.getElementById(`user-${i}`);
+  if (!card) return;
+  card.className = `user-card ${stateName}`;
+  card.querySelector('.status-text').textContent = statusText;
+  if (time !== undefined) {
+    document.getElementById(`user-time-${i}`).textContent = `${time}ms`;
+  }
+}
+
+async function runDemo() {
+  if (state.running) return;
+  state.running = true;
+  state.timelineLog = [];
+  state.orderIds = [];
+
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true;
+  btn.textContent = 'Racing...';
+  document.getElementById('resultsPanel').classList.remove('show');
+  document.getElementById('resetBtn').style.display = 'none';
+
+  // Refresh product stock
+  const { body: freshProduct } = await api(`/products/${state.product.id}`);
+  state.product = freshProduct;
+  state.originalStock = freshProduct.stock;
+  updateStockDisplay(freshProduct.stock);
+
+  const numUsers = parseInt(document.getElementById('numUsers').value) || 10;
+  const qtyEach = Math.floor(state.originalStock / 3);
+
+  if (qtyEach < 1) {
+    alert('Stock too low to run demo. Please reset or reseed.');
+    btn.disabled = false;
+    btn.textContent = '▶ Race All Users Simultaneously';
+    state.running = false;
+    return;
+  }
+
+  renderUsers();
+
+  tlog(`Starting race with ${numUsers} users, ${qtyEach} items each, stock: ${state.originalStock}`, 't-info');
+  tlog(`Max possible winners: ${Math.floor(state.originalStock / qtyEach)}`, 't-info');
+
+  // Phase 1: Prepare carts
+  tlog('Preparing user carts...', 't-info');
+  const userIds = [];
+  for (let i = 0; i < numUsers; i++) {
+    const userId = `demo_user_${i}_${Date.now()}`;
+    userIds.push(userId);
+    await api(`/cart/${userId}`, { method: 'DELETE' }).catch(() => {});
+    await api(`/cart/${userId}/items`, {
+      method: 'POST',
+      body: JSON.stringify({ productId: state.product.id, quantity: qtyEach }),
+    });
+    tlog(`User ${i + 1} cart ready (${qtyEach}x ${state.product.name})`, 't-dim');
+  }
+  state.userIds = userIds;
+
+  // Phase 2: Set all to "racing"
+  tlog('────────────────────────────────────', 't-dim');
+  tlog('🏁 GO! All users placing orders NOW!', 't-warn');
+  tlog('────────────────────────────────────', 't-dim');
+
+  for (let i = 0; i < numUsers; i++) {
+    setUserState(i, 'racing', 'Ordering...');
+  }
+
+  // Phase 3: Fire all simultaneously
+  const startTime = Date.now();
+
+  const results = await Promise.allSettled(
+    userIds.map(async (userId, i) => {
+      const { status, body } = await api('/orders', {
+        method: 'POST',
+        body: JSON.stringify({ userId }),
+      });
+      const elapsed = Date.now() - startTime;
+      return { index: i, status, body, elapsed };
+    })
+  );
+
+  // Phase 4: Animate results with stagger
+  let successCount = 0;
+  let failCount = 0;
+  let totalSold = 0;
+
+  // Sort by elapsed time for dramatic effect
+  const sorted = results
+    .map((r, i) => ({ ...r, originalIndex: i }))
+    .sort((a, b) => {
+      const aElapsed = a.status === 'fulfilled' ? a.value.elapsed : 9999;
+      const bElapsed = b.status === 'fulfilled' ? b.value.elapsed : 9999;
+      return aElapsed - bElapsed;
+    });
+
+  for (let s = 0; s < sorted.length; s++) {
+    const r = sorted[s];
+    await new Promise(resolve => setTimeout(resolve, 200)); // stagger animation
+
+    if (r.status === 'rejected') {
+      failCount++;
+      const i = r.originalIndex;
+      setUserState(i, 'failed', 'Error', 0);
+      tlog(`User ${i + 1}: NETWORK ERROR`, 't-fail');
+      continue;
+    }
+
+    const { index, status, body, elapsed } = r.value;
+
+    if (status === 201) {
+      successCount++;
+      const qty = body.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+      totalSold += qty;
+      state.orderIds.push(body.id);
+      setUserState(index, 'success', `✓ Ordered!`, elapsed);
+      tlog(`User ${index + 1}: ✅ ORDER SUCCESS (${elapsed}ms) — ${qty} items — $${Number(body.totalAmount).toFixed(2)}`, 't-success');
+
+      // Update stock bar
+      const newStock = state.originalStock - totalSold;
+      updateStockDisplay(Math.max(newStock, 0));
+    } else {
+      failCount++;
+      const msg = typeof body.message === 'string' ? body.message : 'Rejected';
+      const shortMsg = msg.length > 20 ? msg.slice(0, 20) + '...' : msg;
+      setUserState(index, 'failed', `✗ ${shortMsg}`, elapsed);
+      tlog(`User ${index + 1}: ❌ REJECTED (${elapsed}ms) — ${msg}`, 't-fail');
+    }
+  }
+
+  // Phase 5: Verify stock
+  const { body: verifyProduct } = await api(`/products/${state.product.id}`);
+  const expectedStock = state.originalStock - totalSold;
+
+  tlog('────────────────────────────────────', 't-dim');
+  tlog(`Final stock in DB: ${verifyProduct.stock} (expected: ${expectedStock})`, 't-info');
+
+  updateStockDisplay(verifyProduct.stock);
+
+  // Show results panel
+  const maxPossible = Math.floor(state.originalStock / qtyEach);
+  const passed = totalSold <= state.originalStock && verifyProduct.stock === expectedStock;
+
+  const panel = document.getElementById('resultsPanel');
+  document.getElementById('resultsGrid').innerHTML = `
+    <div class="result-stat green">
+      <div class="number">${successCount}</div>
+      <div class="label">Orders Succeeded</div>
+    </div>
+    <div class="result-stat red">
+      <div class="number">${failCount}</div>
+      <div class="label">Orders Rejected</div>
+    </div>
+    <div class="result-stat neutral">
+      <div class="number">${totalSold}</div>
+      <div class="label">Items Sold</div>
+    </div>
+    <div class="result-stat neutral">
+      <div class="number">${verifyProduct.stock}</div>
+      <div class="label">Stock Remaining</div>
+    </div>
+  `;
+
+  const verdict = document.getElementById('verdict');
+  if (passed) {
+    verdict.className = 'verdict pass';
+    verdict.innerHTML = `✅ CONCURRENCY TEST PASSED<br><small style="font-weight:400;font-size:14px;">Sold ${totalSold} of ${state.originalStock} items. No overselling. Database locking works perfectly.</small>`;
+    tlog('🎉 PASSED — No overselling detected!', 't-success');
+  } else {
+    verdict.className = 'verdict fail';
+    verdict.innerHTML = `🚨 CONCURRENCY TEST FAILED<br><small>Overselling detected!</small>`;
+    tlog('🚨 FAILED — Overselling detected!', 't-fail');
+  }
+
+  panel.classList.add('show');
+
+  btn.disabled = false;
+  btn.textContent = '▶ Race Again';
+  document.getElementById('resetBtn').style.display = 'inline-block';
+  state.running = false;
+}
+
+async function resetDemo() {
+  // Cancel all orders to restore stock
+  const btn = document.getElementById('resetBtn');
+  btn.textContent = 'Restoring stock...';
+  btn.disabled = true;
+
+  for (const orderId of state.orderIds) {
+    await api(`/orders/${orderId}/cancel`, { method: 'POST' }).catch(() => {});
+  }
+  state.orderIds = [];
+
+  // Clean up test carts
+  for (const userId of state.userIds) {
+    await api(`/cart/${userId}`, { method: 'DELETE' }).catch(() => {});
+  }
+  state.userIds = [];
+
+  // Refresh
+  const { body } = await api(`/products/${state.product.id}`);
+  state.product = body;
+  state.originalStock = body.stock;
+  updateStockDisplay(body.stock);
+  renderUsers();
+
+  document.getElementById('resultsPanel').classList.remove('show');
+  state.timelineLog = [];
+  btn.textContent = 'Reset Demo';
+  btn.disabled = false;
+  btn.style.display = 'none';
+  document.getElementById('runBtn').textContent = '▶ Race All Users Simultaneously';
+
+  tlog('Stock restored. Ready for another race!', 't-info');
+}
+
+// Re-render users when count changes
+document.getElementById('numUsers').addEventListener('change', renderUsers);
+</script>
+</body>
+</html>
