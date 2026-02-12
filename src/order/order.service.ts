@@ -27,7 +27,8 @@ export class OrderService {
 
     // Use an interactive transaction with serializable isolation
     // to prevent race conditions (overselling)
-    return this.prisma.$transaction(
+    try {
+    return await this.prisma.$transaction(
       async (tx) => {
         const insufficientItems: {
           productId: string;
@@ -123,6 +124,19 @@ export class OrderService {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
       },
     );
+    } catch (error) {
+      // Handle PostgreSQL serialization failures (concurrent transaction conflicts)
+      // Error code P2034 = transaction conflict, 40001 = serialization_failure
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        (error.code === 'P2034' || error.code === 'P2010')
+      ) {
+        throw new BadRequestException(
+          'Order could not be processed due to concurrent demand. Please try again.',
+        );
+      }
+      throw error;
+    }
   }
 
   async findOne(id: string) {
